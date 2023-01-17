@@ -1,0 +1,82 @@
+﻿/*
+    send
+      "nnn + u" = upload value
+      "nnn + s" = store value to eeprom
+      "g" = get actual value
+*/
+
+#include <EEPROM.h>
+
+const int ledPin = 13; // pin the LED is connected to
+byte high = EEPROM.read(0);
+byte low = EEPROM.read(1);
+int   blinkRate = word(high, low);  // blink rate stored in this variable
+int value;
+//int value = EEPROM.read(0);
+int addr = 0;
+
+int ledState = LOW;
+unsigned long previousMillis = 0;
+const long interval = 1000;
+
+void setup()
+{
+  Serial.begin(9600); // Initialize serial port to send and receive at 9600 baud
+  pinMode(ledPin, OUTPUT); // set this pin as output
+}
+
+void loop()
+{
+  if ( Serial.available())
+  {
+    char ch = Serial.read();
+    if (ch >= '0' && ch <= '9') // is this an ascii digit between 0 and 9?
+    {
+      value = (value * 10) + (ch - '0'); // yes, accumulate the value
+    }
+    else if (ch == 117)  // is the character "u" upload
+    {
+      blinkRate = value;  // set blinkrate to the accumulated value
+      Serial.print("Set value: ");
+      Serial.print(blinkRate);
+      Serial.println("ms");
+      value = 0; // reset val to 0 ready for the next sequence of digits
+    }
+
+    else if (ch == 103)  // is the character "g" get
+    {
+      Serial.print("Eeprom get value: ");
+      Serial.print(blinkRate);
+      Serial.println("ms");
+    }
+
+    else if (ch == 115)  // is the character "s" store
+    {
+     // blinkRate = value;  // set blinkrate to the accumulated value
+      EEPROM.write(0, highByte(value));
+      EEPROM.write(1, lowByte(value));
+      Serial.print("Eeprom stored value: ");
+      Serial.print(value);
+      Serial.println("ms");
+      value = 0; // reset val to 0 ready for the next sequence of digits
+    }
+  }
+
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= (blinkRate / 2) )
+  {
+    // save the last time you blinked the LED
+    previousMillis = currentMillis;
+
+    // if the LED is off turn it on and vice-versa:
+    if (ledState == LOW)
+    {
+      ledState = HIGH;
+    } else
+    {
+      ledState = LOW;
+    }
+    digitalWrite(ledPin, ledState);
+  }
+}
